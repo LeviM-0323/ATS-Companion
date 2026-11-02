@@ -32,13 +32,19 @@ The bridge requires Node.js 20 or newer.
 
 The bridge opens its setup page on the PC. In the mobile app's Bridge tab, scan the displayed QR code or enter its bridge address and short code. The phone and PC must be on the same trusted Wi-Fi network. Allow Node.js through Windows Firewall for private networks if prompted.
 
-To install the live telemetry plugin, install Visual Studio C++ Build Tools with the Desktop development with C++ workload, then run:
+To install the latest prebuilt telemetry plugin without C++ build tools, run:
 
 ```powershell
 npm run setup:plugin
 ```
 
-The script downloads the official SCS Telemetry SDK, builds the x64 plugin, and copies it into the ATS plugin directory. Restart ATS and keep the bridge running. Use `npm start -- --demo` instead to preview sample readings without ATS.
+The installer downloads the plugin from the [latest GitHub Release](https://github.com/LeviM-0323/ATS-Companion/releases/latest), detects ATS in Steam libraries, and prompts for the game folder if detection fails. Restart ATS after installation and keep the bridge running.
+
+For manual installation, download `ATSCompanionTelemetry.dll` from the [latest GitHub Release](https://github.com/LeviM-0323/ATS-Companion/releases/latest) and copy it to `<ATS game folder>\bin\win_x64\plugins\ATSCompanionTelemetry.dll` (create the `plugins` folder if needed), then restart ATS.
+
+To build the plugin from source instead, install Visual Studio C++ Build Tools with the Desktop development with C++ workload, then run `npm run setup:plugin -- -BuildFromSource`. The build script downloads and verifies the official SCS Telemetry SDK before compiling the x64 DLL.
+
+Use `npm start -- --demo` to preview sample readings without ATS.
 
 The bridge defaults to port `3210`; set `PORT` to change it. Set `HOST` to `127.0.0.1` to restrict the server to the PC, or leave its default `0.0.0.0` to accept connections on network interfaces. Do not forward the bridge port to the internet.
 

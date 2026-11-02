@@ -1,23 +1,35 @@
 param(
   [string]$SdkArchive,
-  [string]$OutputPath
+  [string]$OutputPath,
+  [ValidatePattern('^\d+\.\d+$')]
+  [string]$CompilerToolset
 )
 
 $ErrorActionPreference = 'Stop'
 $pluginDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
-$bridgeDirectory = Split-Path -Parent $pluginDirectory
-$repositoryDirectory = Split-Path -Parent $bridgeDirectory
 $outputDirectory = Join-Path $pluginDirectory 'build'
+$expectedSdkHash = '49821e25568f4d7e462135f577f8fef2ab197326404f2c1daef139b8f3dc5e69'
 if (-not $OutputPath) {
   $OutputPath = Join-Path $outputDirectory 'ATSCompanionTelemetry.dll'
 }
+$OutputPath = [System.IO.Path]::GetFullPath($OutputPath)
 
 if (-not $SdkArchive) {
   $SdkArchive = Join-Path $env:TEMP 'ats-companion-scs-sdk-1.16.zip'
 }
 if (-not (Test-Path -LiteralPath $SdkArchive)) {
   Write-Host 'Downloading the official SCS Telemetry SDK 1.16...'
-  Invoke-WebRequest -Uri 'https://download.eurotrucksimulator2.com/scs_sdk_1_16.zip' -OutFile $SdkArchive
+  try {
+    Invoke-WebRequest -Uri 'https://download.eurotrucksimulator2.com/scs_sdk_1_16.zip' -OutFile $SdkArchive
+  }
+  catch {
+    throw "Failed to download the SCS Telemetry SDK 1.16: $($_.Exception.Message)"
+  }
+}
+
+$actualSdkHash = (Get-FileHash -LiteralPath $SdkArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($actualSdkHash -ne $expectedSdkHash) {
+  throw "The SCS Telemetry SDK archive failed its SHA-256 check. Expected $expectedSdkHash, received $actualSdkHash."
 }
 
 $sdkDirectory = Join-Path $env:TEMP 'ats-companion-scs-sdk-1.16'
@@ -29,12 +41,23 @@ if (-not (Test-Path -LiteralPath (Join-Path $sdkDirectory 'include\scssdk_teleme
 }
 $includeDirectory = Join-Path $sdkDirectory 'include'
 if (-not (Test-Path -LiteralPath (Join-Path $includeDirectory 'scssdk_telemetry.h'))) {
-  throw "The SCS SDK archive does not contain include\scssdk_telemetry.h: $SdkArchive"
+  throw "The verified SCS SDK archive does not contain include\scssdk_telemetry.h: $SdkArchive"
+}
+
+$sourceFile = Join-Path $pluginDirectory 'ATSCompanionTelemetry.cpp'
+$definitionFile = Join-Path $pluginDirectory 'ATSCompanionTelemetry.def'
+if (-not (Test-Path -LiteralPath $sourceFile)) {
+  throw "The telemetry plugin source file is missing: $sourceFile"
+}
+if (-not (Test-Path -LiteralPath $definitionFile)) {
+  throw "The telemetry plugin export definition is missing: $definitionFile"
 }
 
 $compiler = Get-Command cl.exe -ErrorAction SilentlyContinue
-if (-not $compiler) {
-  $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+$useDeveloperCommand = $CompilerToolset -or -not $compiler
+if ($useDeveloperCommand) {
+  $programFilesX86 = [Environment]::GetFolderPath('ProgramFilesX86')
+  $vswhere = Join-Path $programFilesX86 'Microsoft Visual Studio\Installer\vswhere.exe'
   if (-not (Test-Path -LiteralPath $vswhere)) {
     throw 'Visual Studio C++ Build Tools were not found. Install the Desktop development with C++ workload, then rerun this script.'
   }
@@ -48,25 +71,25 @@ if (-not $compiler) {
   }
 }
 
-New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
-$sourceFile = Join-Path $pluginDirectory 'ATSCompanionTelemetry.cpp'
-$definitionFile = Join-Path $pluginDirectory 'ATSCompanionTelemetry.def'
+$outputParent = Split-Path -Parent $OutputPath
+New-Item -ItemType Directory -Force -Path $outputParent | Out-Null
 $compileCommand = "cl.exe /nologo /std:c++17 /EHsc /O2 /LD /I `"$includeDirectory`" `"$sourceFile`" /link /DEF:`"$definitionFile`" /OUT:`"$OutputPath`""
-if ($compiler) {
+if (-not $useDeveloperCommand) {
   & $compiler.Source /nologo /std:c++17 /EHsc /O2 /LD /I $includeDirectory $sourceFile /link "/DEF:$definitionFile" "/OUT:$OutputPath"
   if ($LASTEXITCODE -ne 0) {
     throw "SCS telemetry plugin build failed with exit code $LASTEXITCODE."
   }
 }
 else {
-  $command = "call `"$developerCommand`" -arch=x64 -host_arch=x64 && $compileCommand"
+  $toolsetArgument = if ($CompilerToolset) { " -vcvars_ver=$CompilerToolset" } else { '' }
+  $command = "call `"$developerCommand`" -arch=x64 -host_arch=x64$toolsetArgument && $compileCommand"
   & $env:ComSpec /d /c $command
   if ($LASTEXITCODE -ne 0) {
     throw "SCS telemetry plugin build failed with exit code $LASTEXITCODE."
   }
 }
 
-if (-not (Test-Path -LiteralPath $OutputPath)) {
+if (-not (Test-Path -LiteralPath $OutputPath) -or (Get-Item -LiteralPath $OutputPath).Length -eq 0) {
   throw "The compiler reported success but the plugin DLL was not created: $OutputPath"
 }
 Write-Host "Built ATS telemetry plugin: $OutputPath"

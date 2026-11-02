@@ -10,4 +10,10 @@ node_modules/
 *.dll
 *.exe
 *.obj
+*.pdb
+*.ilk
+*.idb
+*.pch
+*.tlog
 *.def
+!windows-bridge/plugin/ATSCompanionTelemetry.def
