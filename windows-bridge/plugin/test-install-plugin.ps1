@@ -83,6 +83,17 @@ try {
   $detectedDll = Join-Path $detectedGame 'bin\win_x64\plugins\ATSCompanionTelemetry.dll'
   Assert-Equal 'updated plugin' ([System.IO.File]::ReadAllText($detectedDll)) 'Steam detection should select the ATS installation in the library file.'
 
+  $alternateGame = New-TestGameDirectory (Join-Path $testRoot 'alternate-game')
+  $env:ATS_COMPANION_INSTALL_TEST_PATH = $alternateGame
+  $errorMessage = Invoke-Installer @{
+    SteamPath = $steamRoot
+    PluginDll = $pluginDll
+  }
+  Assert-Equal '' "$errorMessage" 'The installer should accept another folder when Steam finds one installation.'
+  $alternateDll = Join-Path $alternateGame 'bin\win_x64\plugins\ATSCompanionTelemetry.dll'
+  Assert-Equal 'updated plugin' ([System.IO.File]::ReadAllText($alternateDll)) 'Manual selection should override the detected Steam installation.'
+
+  $env:ATS_COMPANION_INSTALL_TEST_PATH = ''
   $env:ATS_COMPANION_INSTALL_TEST_PATH = New-TestGameDirectory (Join-Path $testRoot 'prompt-game')
   $errorMessage = Invoke-Installer @{
     SteamPath = (Join-Path $testRoot 'empty-steam')

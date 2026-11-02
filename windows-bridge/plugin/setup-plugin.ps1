@@ -108,8 +108,10 @@ try {
   if (-not $GameDirectory) {
     $detectedGames = @(Find-AtsGameDirectories)
     if ($detectedGames.Count -eq 1) {
-      $GameDirectory = $detectedGames[0]
-      Write-Host "Detected American Truck Simulator at: $GameDirectory"
+      $detectedGame = $detectedGames[0]
+      Write-Host "Detected American Truck Simulator at: $detectedGame"
+      $manualSelection = Read-Host 'Press Enter to use this installation, or enter another ATS game folder'
+      $GameDirectory = if ($manualSelection) { $manualSelection } else { $detectedGame }
     }
     elseif ($detectedGames.Count -gt 1) {
       Write-Host 'Multiple American Truck Simulator installations were found:'

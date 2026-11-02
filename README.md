@@ -38,7 +38,7 @@ To install the latest prebuilt telemetry plugin without C++ build tools, run:
 npm run setup:plugin
 ```
 
-The installer downloads the plugin from the [latest GitHub Release](https://github.com/LeviM-0323/ATS-Companion/releases/latest), detects ATS in Steam libraries, and prompts for the game folder if detection fails. Restart ATS after installation and keep the bridge running.
+The installer downloads the plugin from the [latest GitHub Release](https://github.com/LeviM-0323/ATS-Companion/releases/latest), detects ATS in Steam libraries, and lets you choose another game folder if needed. If detection fails, it prompts for the folder. Restart ATS after installation and keep the bridge running.
 
 For manual installation, download `ATSCompanionTelemetry.dll` from the [latest GitHub Release](https://github.com/LeviM-0323/ATS-Companion/releases/latest) and copy it to `<ATS game folder>\bin\win_x64\plugins\ATSCompanionTelemetry.dll` (create the `plugins` folder if needed), then restart ATS.
 
