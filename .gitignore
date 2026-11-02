@@ -1,3 +1,13 @@
 AGENTS.md
 GLOSSARY.md
 docs/
+node_modules/
+*.log
+*.exp
+*.lib
+*.o
+*.so
+*.dll
+*.exe
+*.obj
+*.def

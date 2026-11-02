@@ -28,6 +28,8 @@ npm install
 npm start
 ```
 
+The bridge requires Node.js 20 or newer.
+
 The bridge opens its setup page on the PC. In the mobile app's Bridge tab, scan the displayed QR code or enter its bridge address and short code. The phone and PC must be on the same trusted Wi-Fi network. Allow Node.js through Windows Firewall for private networks if prompted.
 
 To install the live telemetry plugin, install Visual Studio C++ Build Tools with the Desktop development with C++ workload, then run:
