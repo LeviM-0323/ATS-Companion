@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "ATS Companion",
+    "slug": "ats-companion",
+    "version": "1.0.0",
+    "scheme": "ats-companion",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "ATS Companion connects to the Windows bridge on your local network.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0B1015",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "package": "com.anonymous.atscompanion"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow ATS Companion to scan the Windows bridge pairing QR code.",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-router",
+      "./plugins/withAndroidCleartextTraffic"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
