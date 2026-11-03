@@ -73,19 +73,29 @@ test('telemetry pipe normalizes SDK values into the mobile snapshot units', asyn
     })}\n`,
   );
 
-  const response = await fetch(`${baseUrl}/api/v1/snapshot`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  assert.equal(response.status, 200);
-  const snapshot = await response.json();
-  assert.equal(snapshot.mode, 'live');
-  assert.equal(snapshot.truck.speedMph, 62.14);
-  assert.equal(snapshot.truck.fuelGallons, 26.42);
-  assert.equal(snapshot.truck.fuelCapacityGallons, 132.09);
-  assert.equal(snapshot.truck.odometerMiles, 621.37);
-  assert.equal(snapshot.job.remainingMiles, 100);
-  assert.equal(snapshot.job.estimatedTimeMinutes, 60);
-  pipe.destroy();
+  try {
+    let response;
+    const deadline = Date.now() + 1000;
+    do {
+      response = await fetch(`${baseUrl}/api/v1/snapshot`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status !== 503) break;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    } while (Date.now() < deadline);
+
+    assert.equal(response.status, 200);
+    const snapshot = await response.json();
+    assert.equal(snapshot.mode, 'live');
+    assert.equal(snapshot.truck.speedMph, 62.14);
+    assert.equal(snapshot.truck.fuelGallons, 26.42);
+    assert.equal(snapshot.truck.fuelCapacityGallons, 132.09);
+    assert.equal(snapshot.truck.odometerMiles, 621.37);
+    assert.equal(snapshot.job.remainingMiles, 100);
+    assert.equal(snapshot.job.estimatedTimeMinutes, 60);
+  } finally {
+    pipe.destroy();
+  }
 });
 
 test('telemetry receiver rejects unknown protocol versions', async () => {
