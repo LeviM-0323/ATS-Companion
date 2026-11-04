@@ -342,6 +342,7 @@ function parsePort(value) {
 }
 
 function openSetupPage(url) {
+  if (process.platform !== 'win32') return;
   const child = execFile('cmd.exe', ['/c', 'start', '', url], { windowsHide: true });
   child.on('error', (error) => console.warn(`Could not open the setup page automatically: ${error.message}`));
 }
@@ -359,22 +360,29 @@ async function start() {
     storagePath: `${storageDirectory}/ATS Companion/devices.json`,
   });
   await registry.load();
-  const telemetryReceiver = createTelemetryReceiver();
-  telemetryReceiver.listen(TELEMETRY_PIPE);
-  telemetryReceiver.onError((error) => console.error('Telemetry pipe failed:', error));
+  let telemetryReceiver = null;
+  if (process.platform === 'win32') {
+    telemetryReceiver = createTelemetryReceiver();
+    telemetryReceiver.listen(TELEMETRY_PIPE);
+    telemetryReceiver.onError((error) => console.error('Telemetry pipe failed:', error));
+  } else if (process.platform === 'linux' && !demoMode) {
+    console.warn('ATS live telemetry is not verified on Linux; live snapshots will remain unavailable.');
+  }
   const localAddress = validateBridgeUrl(
     process.env.BRIDGE_URL ?? `http://${getLocalIpv4Addresses()[0] ?? '127.0.0.1'}:${port}`,
   );
   const server = createBridgeServer({
     deviceRegistry: registry,
     bridgeUrl: localAddress,
-    snapshotProvider: demoMode ? () => ({ ...demoSnapshot, capturedAt: new Date().toISOString() }) : telemetryReceiver.snapshotProvider,
+    snapshotProvider: demoMode
+      ? () => ({ ...demoSnapshot, capturedAt: new Date().toISOString() })
+      : telemetryReceiver?.snapshotProvider,
   });
 
   server.on('error', (error) => {
-    console.error('Could not start the Windows bridge:', error);
+    console.error('Could not start the ATS Companion bridge:', error);
     process.exitCode = 1;
-    telemetryReceiver.close().catch((closeError) => console.error('Could not close the telemetry pipe:', closeError));
+    telemetryReceiver?.close().catch((closeError) => console.error('Could not close the telemetry pipe:', closeError));
   });
   server.listen(port, host, () => {
     console.log(`ATS Companion bridge listening on ${host}:${port}`);
@@ -383,7 +391,11 @@ async function start() {
     console.log(
       demoMode
         ? 'DEMO MODE: sample readings only; no ATS game data is being read.'
-        : `Waiting for the ATS plugin on ${TELEMETRY_PIPE}`,
+        : telemetryReceiver
+          ? `Waiting for the ATS plugin on ${TELEMETRY_PIPE}`
+          : process.platform === 'linux'
+            ? 'Live ATS telemetry is unavailable on Linux.'
+            : 'No live ATS telemetry source is configured for this platform.',
     );
     console.log('Use only on a trusted private network; do not forward this port to the internet.');
     openSetupPage(`http://localhost:${port}/setup`);
@@ -392,7 +404,7 @@ async function start() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   start().catch((error) => {
-    console.error('Could not start the Windows bridge:', error);
+    console.error('Could not start the ATS Companion bridge:', error);
     process.exitCode = 1;
   });
 }

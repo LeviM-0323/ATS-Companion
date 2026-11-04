@@ -6,6 +6,7 @@ A React Native companion for American Truck Simulator, with a mobile dashboard a
 
 - The mobile app has Drive, Job, Truck, and Bridge screens that adapt to narrow phones and wider tablets.
 - The Windows bridge reads live ATS telemetry from the SCS telemetry plugin through a local named pipe and exposes a read-only snapshot API.
+- The Linux bridge can provide pairing and the authenticated API, but Linux live telemetry is not verified or currently supported.
 - Pair a phone by scanning the one-time QR code on the Windows setup page, or enter its short code. Device credentials are stored in the phone's secure storage.
 - The mobile app retains the last snapshot and marks it stale when the bridge stops responding.
 - Run the bridge with `--demo` to preview a clearly labeled sample dashboard.
@@ -54,3 +55,19 @@ Run bridge tests with:
 cd windows-bridge
 npm test
 ```
+
+## Run the Linux bridge
+
+On Linux, install Node.js 20 or newer and npm, then run the installer from a checkout:
+
+```sh
+./linux-bridge/install.sh
+```
+
+The installer checks common Steam library locations for ATS and accepts `--game-dir "/path/to/American Truck Simulator"` when detection is unavailable or you want to select a different installation. It installs the bridge under `${XDG_DATA_HOME:-$HOME/.local/share}/ats-companion/bridge` by default, without modifying ATS files. Start it with:
+
+```sh
+${XDG_DATA_HOME:-$HOME/.local/share}/ats-companion/bridge/bin/ats-companion-bridge
+```
+
+Linux pairing and the authenticated read-only API are available, but a real ATS/Linux telemetry path has not been verified. Linux snapshot requests therefore remain `503 telemetry_unavailable`; installing the bridge does not mean that live telemetry is supported. A controlled ATS session must deliver a real snapshot before that support claim changes.
