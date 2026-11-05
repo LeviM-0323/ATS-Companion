@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta
+      name="description"
+      content="Set up ATS Companion, pair your phone with the PC bridge, and check which telemetry paths are verified."
+    >
+    <title>ATS Companion — Setup guide</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to guide</a>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="ATS Companion home">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <span>ATS <span class="accent-text">COMPANION</span></span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="#windows">Windows</a>
+        <a href="#linux">Linux</a>
+        <a href="#pairing">Pair your phone</a>
+        <a class="nav-cta" href="https://github.com/LeviM-0323/ATS-Companion/releases">Releases ↗</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top" aria-labelledby="page-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="live-dot"></span> YOUR CAB, AT A GLANCE</p>
+          <h1 id="page-title">Your truck.<br><span class="accent-text">Right on your phone.</span></h1>
+          <p class="hero-lede">
+            ATS Companion connects a phone dashboard to American Truck Simulator through a small bridge running on your PC.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#windows">Set up on Windows <span aria-hidden="true">→</span></a>
+            <a class="button button-secondary" href="https://github.com/LeviM-0323/ATS-Companion/releases">Browse releases</a>
+          </div>
+        </div>
+        <aside class="status-card" aria-label="Support status">
+          <p class="card-label">TELEMETRY STATUS</p>
+          <div class="status-row"><span class="status-indicator supported"></span><strong>Windows</strong><span class="status-tag">SUPPORTED PATH</span></div>
+          <p>Use the Windows bridge and Windows telemetry plugin for live ATS data.</p>
+          <div class="status-divider"></div>
+          <div class="status-row"><span class="status-indicator experimental"></span><strong>Linux / Proton</strong><span class="status-tag status-tag-warn">UNVERIFIED</span></div>
+          <p>Linux pairing is available, but live game telemetry is not confirmed.</p>
+        </aside>
+      </section>
+
+      <section class="intro-strip" aria-label="How it works">
+        <div><span class="step-number">01</span><strong>Run the bridge</strong><span>On the PC running ATS</span></div>
+        <span class="strip-arrow" aria-hidden="true">/</span>
+        <div><span class="step-number">02</span><strong>Pair your phone</strong><span>Scan its one-time QR</span></div>
+        <span class="strip-arrow" aria-hidden="true">/</span>
+        <div><span class="step-number">03</span><strong>Start a drive</strong><span>Keep both devices nearby</span></div>
+      </section>
+
+      <section class="guide-section" id="windows" aria-labelledby="windows-title">
+        <div class="section-heading">
+          <p class="eyebrow">RECOMMENDED · LIVE TELEMETRY</p>
+          <h2 id="windows-title">Set up on Windows</h2>
+          <p>For a Windows PC running the Windows x64 version of ATS.</p>
+        </div>
+        <div class="content-grid">
+          <article class="panel setup-panel">
+            <p class="card-label">BEFORE YOU START</p>
+            <ul class="check-list">
+              <li>Windows PC with ATS installed through Steam</li>
+              <li>Node.js 20 or newer and Git</li>
+              <li>Your phone and PC on the same trusted Wi-Fi network</li>
+            </ul>
+          </article>
+          <article class="panel setup-panel">
+            <p class="card-label">INSTALL THE BRIDGE + PLUGIN</p>
+            <p>In PowerShell, download the project and run the bridge setup:</p>
+            <pre><code>git clone https://github.com/LeviM-0323/ATS-Companion.git
+cd ATS-Companion\bridge
+npm ci
+npm run setup:plugin
+npm start</code></pre>
+            <p class="muted">The plugin setup detects Steam installs or asks you to choose the ATS folder. Restart ATS after installation.</p>
+          </article>
+        </div>
+        <details class="manual-details">
+          <summary>Install the Windows plugin manually</summary>
+          <p>Download <code>ATSCompanionTelemetry.dll</code> from the <a href="https://github.com/LeviM-0323/ATS-Companion/releases">GitHub Releases</a> page. Copy it to <code>&lt;ATS folder&gt;\bin\win_x64\plugins\ATSCompanionTelemetry.dll</code>, create the <code>plugins</code> folder if needed, then restart ATS.</p>
+        </details>
+      </section>
+
+      <section class="guide-section linux-section" id="linux" aria-labelledby="linux-title">
+        <div class="section-heading">
+          <p class="eyebrow">EXPERIMENTAL · READ THE LIMITS</p>
+          <h2 id="linux-title">Linux and Proton</h2>
+          <p>The bridge can be installed on Linux, but the live game-to-phone path has not been verified end to end.</p>
+        </div>
+        <div class="content-grid">
+          <article class="panel">
+            <p class="card-label">LINUX BRIDGE</p>
+            <p>Requires Node.js 20 or newer and npm. Building the native plugin also requires <code>g++</code>, <code>curl</code>, <code>sha256sum</code>, and <code>unzip</code>.</p>
+            <pre><code>git clone https://github.com/LeviM-0323/ATS-Companion.git
+cd ATS-Companion
+./bridge/linux-install.sh --game-dir "/path/to/American Truck Simulator"</code></pre>
+            <p>For a native x86_64 Linux ATS installation, the installer builds and installs the Linux plugin. Start the bridge from the printed install path. Pairing and the API are available, but live telemetry remains <strong class="warning-text">experimental and not verified</strong>.</p>
+          </article>
+          <article class="panel boundary-panel">
+            <p class="card-label">WHAT ISN'T VERIFIED</p>
+            <ul class="check-list">
+              <li>A fresh live snapshot from native Linux ATS</li>
+              <li>Windows ATS running through Proton with this bridge</li>
+            </ul>
+            <p>Proton runs the Windows game build; the Linux <code>.so</code> plugin is for native Linux ATS only. Do not rely on either Linux route for live telemetry yet.</p>
+            <a class="text-link" href="https://github.com/LeviM-0323/ATS-Companion">Follow compatibility updates ↗</a>
+          </article>
+        </div>
+      </section>
+
+      <section class="guide-section pairing-section" id="pairing" aria-labelledby="pairing-title">
+        <div class="section-heading">
+          <p class="eyebrow">BRIDGE TAB · ONE-TIME CODE</p>
+          <h2 id="pairing-title">Pair your phone</h2>
+          <p>Once the bridge is running, connect from the Companion app on the same local network.</p>
+        </div>
+        <div class="pairing-steps">
+          <article class="panel pairing-card"><span class="step-number">01</span><h3>Open the setup page</h3><p>On the PC, visit <code>http://localhost:3210/setup</code>. The Windows bridge may open this page for you.</p></article>
+          <article class="panel pairing-card"><span class="step-number">02</span><h3>Scan or enter the code</h3><p>In the app's Bridge tab, scan the QR code or enter the bridge address and one-time code.</p></article>
+          <article class="panel pairing-card"><span class="step-number">03</span><h3>Keep the network private</h3><p>Allow the bridge through your firewall on private networks only. Keep the phone and PC on the same trusted Wi-Fi.</p></article>
+        </div>
+        <aside class="security-note">
+          <span class="security-icon" aria-hidden="true">!</span>
+          <p><strong>Local network only.</strong> The bridge uses port <code>3210</code> by default. Do not forward the bridge port or expose it to the public internet.</p>
+        </aside>
+      </section>
+
+      <section class="guide-section" id="telemetry" aria-labelledby="telemetry-title">
+        <div class="section-heading">
+          <p class="eyebrow">KNOW WHAT YOU'RE SEEING</p>
+          <h2 id="telemetry-title">Live data or demo?</h2>
+        </div>
+        <div class="content-grid telemetry-grid">
+          <article class="panel telemetry-panel">
+            <span class="telemetry-badge live-badge"><span class="status-indicator supported"></span> LIVE</span>
+            <h3>From your game</h3>
+            <p>On the supported Windows path, live snapshots come from ATS through the telemetry plugin. Install the plugin and restart ATS before expecting data.</p>
+          </article>
+          <article class="panel telemetry-panel demo-panel">
+            <span class="telemetry-badge demo-badge"><span class="status-indicator experimental"></span> DEMO</span>
+            <h3>Sample readings</h3>
+            <p>Run <code>npm start -- --demo</code> from the <code>bridge</code> folder to preview sample dashboard values. Demo mode does not read ATS and is not live telemetry.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="guide-section troubleshooting-section" id="troubleshooting" aria-labelledby="troubleshooting-title">
+        <div class="section-heading">
+          <p class="eyebrow">QUICK CHECKS</p>
+          <h2 id="troubleshooting-title">Something not working?</h2>
+        </div>
+        <div class="troubleshooting-list">
+          <details>
+            <summary>The app says “Waiting for telemetry”</summary>
+            <p>On Windows, confirm ATS is running, the plugin is in the correct <code>bin\win_x64\plugins</code> folder, and ATS was restarted after installation. Keep the bridge running and check its console for errors. On Linux, live telemetry has not been verified and may remain unavailable.</p>
+          </details>
+          <details>
+            <summary>My phone can't pair with the bridge</summary>
+            <p>Check that both devices are on the same trusted Wi-Fi, refresh the one-time QR/code, and allow the bridge through your PC firewall for private networks. The bridge address shown in the setup page must be reachable from the phone.</p>
+          </details>
+          <details>
+            <summary>The plugin wasn't installed</summary>
+            <p>Make sure the selected folder contains ATS x64 binaries. For manual setup, use the matching Windows DLL from <a href="https://github.com/LeviM-0323/ATS-Companion/releases">Releases</a>. Close ATS before replacing a plugin, then restart it.</p>
+          </details>
+        </div>
+      </section>
+
+      <section class="app-note" aria-labelledby="app-title">
+        <div>
+          <p class="eyebrow">THE COMPANION APP</p>
+          <h2 id="app-title">No app store download is listed yet.</h2>
+          <p>The mobile client is currently available as project source. Open the <code>mobile</code> folder, run <code>npm ci</code> and <code>npm start</code>, then follow Expo's prompts.</p>
+        </div>
+        <a class="button button-secondary" href="https://github.com/LeviM-0323/ATS-Companion/tree/main/mobile">View app source ↗</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a class="brand footer-brand" href="#top"><span class="brand-mark" aria-hidden="true">A</span><span>ATS <span class="accent-text">COMPANION</span></span></a>
+      <span>Built for the long haul.</span>
+      <a href="https://github.com/LeviM-0323/ATS-Companion">GitHub ↗</a>
+    </footer>
+  </body>
+</html>

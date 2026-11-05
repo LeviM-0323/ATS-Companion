@@ -1,0 +1,52 @@
+name: Publish installation guide
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/check-site.mjs'
+      - '.github/workflows/pages.yml'
+      - 'site/**'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/scripts/check-site.mjs'
+      - '.github/workflows/pages.yml'
+      - 'site/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Validate the published site
+        run: node .github/scripts/check-site.mjs
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
