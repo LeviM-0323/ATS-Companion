@@ -14,8 +14,8 @@ import {
 import type { StyleProp, ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { parsePairingPayload, type PairingPayload } from './src/bridge/contracts';
-import { useBridgeSession } from './src/bridge/useBridgeSession';
+import { parsePairingPayload, type PairingPayload } from './bridge/contracts';
+import { useBridgeSession } from './bridge/useBridgeSession';
 
 export type Tab = 'drive' | 'job' | 'truck' | 'setup';
 

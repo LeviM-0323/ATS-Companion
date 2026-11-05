@@ -1,5 +1,5 @@
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { CompanionApp, isTab } from '../../App';
+import { CompanionApp, isTab } from '../CompanionApp';
 
 export default function TabRoute() {
   const { tab } = useLocalSearchParams<{ tab?: string }>();
