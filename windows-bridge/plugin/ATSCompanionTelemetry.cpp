@@ -32,14 +32,7 @@ std::string telemetrySocketPath() {
     const char* configuredPath = std::getenv("ATS_COMPANION_TELEMETRY_SOCKET");
     if (configuredPath && configuredPath[0] != '\0') return configuredPath;
 
-    const char* runtimeDirectory = std::getenv("XDG_RUNTIME_DIR");
-    if (runtimeDirectory && runtimeDirectory[0] != '\0') {
-        return std::string(runtimeDirectory) + "/ats-companion/telemetry.sock";
-    }
-    const char* temporaryDirectory = std::getenv("TMPDIR");
-    const std::string temporaryRoot =
-        temporaryDirectory && temporaryDirectory[0] != '\0' ? temporaryDirectory : "/tmp";
-    return temporaryRoot + "/ats-companion-" + std::to_string(getuid()) + "/telemetry.sock";
+    return "/tmp/ats-companion-" + std::to_string(getuid()) + "/telemetry.sock";
 }
 #endif
 

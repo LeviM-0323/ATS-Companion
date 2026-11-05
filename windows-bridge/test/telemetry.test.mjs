@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { createConnection } from 'node:net';
 import { createBridgeServer } from '../src/server.mjs';
-import { createTelemetryReceiver } from '../src/telemetry.mjs';
+import { createTelemetryReceiver, getTelemetrySocketPath } from '../src/telemetry.mjs';
 
 const token = 'test-device-token';
 let receiver;
@@ -33,6 +33,23 @@ after(async () => {
     }),
     receiver.close(),
   ]);
+});
+
+test('Linux telemetry uses a shared socket path when XDG_RUNTIME_DIR is isolated', {
+  skip: process.platform !== 'linux',
+}, () => {
+  const previousRuntimeDirectory = process.env.XDG_RUNTIME_DIR;
+  process.env.XDG_RUNTIME_DIR = '/run/user/1000';
+
+  try {
+    assert.equal(
+      getTelemetrySocketPath(),
+      `/tmp/ats-companion-${process.getuid()}/telemetry.sock`,
+    );
+  } finally {
+    if (previousRuntimeDirectory === undefined) delete process.env.XDG_RUNTIME_DIR;
+    else process.env.XDG_RUNTIME_DIR = previousRuntimeDirectory;
+  }
 });
 
 test('snapshot reports unavailable until valid telemetry arrives', async () => {

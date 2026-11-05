@@ -1,6 +1,5 @@
 import { chmod, lstat, mkdir, unlink } from 'node:fs/promises';
 import { createConnection, createServer } from 'node:net';
-import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join } from 'node:path';
 
 export const TELEMETRY_PIPE = '\\\\.\\pipe\\ats-companion-telemetry-v1';
@@ -78,11 +77,7 @@ export function getTelemetrySocketPath() {
   const configuredPath = process.env[TELEMETRY_SOCKET_ENV];
   if (configuredPath) return configuredPath;
 
-  const runtimeDirectory = process.env.XDG_RUNTIME_DIR;
-  const socketDirectory = runtimeDirectory
-    ? join(runtimeDirectory, 'ats-companion')
-    : join(tmpdir(), `ats-companion-${process.getuid()}`);
-  return join(socketDirectory, 'telemetry.sock');
+  return join('/tmp', `ats-companion-${process.getuid()}`, 'telemetry.sock');
 }
 
 async function prepareTelemetrySocket(socketPath) {

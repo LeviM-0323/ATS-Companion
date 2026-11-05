@@ -76,6 +76,6 @@ Start the Linux bridge with:
 ${XDG_DATA_HOME:-$HOME/.local/share}/ats-companion/bridge/bin/ats-companion-bridge
 ```
 
-When `XDG_RUNTIME_DIR` is set, the native plugin and Linux bridge use `$XDG_RUNTIME_DIR/ats-companion/telemetry.sock`. Otherwise, they use `/tmp/ats-companion-<uid>/telemetry.sock`. Set `ATS_COMPANION_TELEMETRY_SOCKET` in both the game and bridge environments to use another socket path.
+The native plugin and Linux bridge use `/tmp/ats-companion-<uid>/telemetry.sock` by default. This shared path is visible to the game when Steam Linux Runtime isolates `$XDG_RUNTIME_DIR` from host processes. Set `ATS_COMPANION_TELEMETRY_SOCKET` in both the game and bridge environments to use another socket path.
 
 The Linux bridge keeps pairing and the authenticated read-only snapshot API. Native live telemetry is experimental until a real game session is confirmed to load the plugin and deliver a fresh snapshot; otherwise snapshot requests return `503 telemetry_unavailable`.
