@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
     paddingHorizontal: 8,
   },
-  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  tab: { minHeight: 48, flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
   tabLabel: { color: colors.subtle, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   activeTabLabel: { color: colors.accent },
   tabIndicator: { height: 2, width: 24, backgroundColor: 'transparent' },
