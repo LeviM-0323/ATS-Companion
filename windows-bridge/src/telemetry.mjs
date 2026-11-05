@@ -1,6 +1,10 @@
-import { createServer } from 'node:net';
+import { chmod, lstat, mkdir, unlink } from 'node:fs/promises';
+import { createConnection, createServer } from 'node:net';
+import { tmpdir } from 'node:os';
+import { dirname, isAbsolute, join } from 'node:path';
 
 export const TELEMETRY_PIPE = '\\\\.\\pipe\\ats-companion-telemetry-v1';
+export const TELEMETRY_SOCKET_ENV = 'ATS_COMPANION_TELEMETRY_SOCKET';
 const METERS_PER_SECOND_TO_MILES_PER_HOUR = 2.2369362920544;
 const LITERS_TO_GALLONS = 0.26417205235815;
 const KILOMETERS_TO_MILES = 0.62137119223733;
@@ -70,6 +74,59 @@ function normalizeFrame(frame, capturedAt) {
   };
 }
 
+export function getTelemetrySocketPath() {
+  const configuredPath = process.env[TELEMETRY_SOCKET_ENV];
+  if (configuredPath) return configuredPath;
+
+  const runtimeDirectory = process.env.XDG_RUNTIME_DIR;
+  const socketDirectory = runtimeDirectory
+    ? join(runtimeDirectory, 'ats-companion')
+    : join(tmpdir(), `ats-companion-${process.getuid()}`);
+  return join(socketDirectory, 'telemetry.sock');
+}
+
+async function prepareTelemetrySocket(socketPath) {
+  if (!isAbsolute(socketPath) || Buffer.byteLength(socketPath) >= 108) {
+    throw new Error('ATS telemetry socket path must be absolute and shorter than 108 bytes.');
+  }
+  const socketDirectory = dirname(socketPath);
+  await mkdir(socketDirectory, { recursive: true, mode: 0o700 });
+  const directoryStats = await lstat(socketDirectory);
+  if (
+    !directoryStats.isDirectory() ||
+    directoryStats.isSymbolicLink() ||
+    directoryStats.uid !== process.getuid()
+  ) {
+    throw new Error(`ATS telemetry socket directory is not a private directory owned by this user: ${socketDirectory}`);
+  }
+  await chmod(socketDirectory, 0o700);
+
+  try {
+    const socketStats = await lstat(socketPath);
+    if (!socketStats.isSocket() || socketStats.uid !== process.getuid()) {
+      throw new Error(`Refusing to replace an unexpected file at the ATS telemetry socket path: ${socketPath}`);
+    }
+
+    await new Promise((resolve, reject) => {
+      const connection = createConnection(socketPath);
+      connection.once('connect', () => {
+        connection.destroy();
+        reject(new Error(`An ATS telemetry receiver is already listening at ${socketPath}`));
+      });
+      connection.once('error', (error) => {
+        if (error.code === 'ECONNREFUSED' || error.code === 'ENOENT') resolve();
+        else reject(error);
+      });
+    });
+    await unlink(socketPath).catch((error) => {
+      if (error.code !== 'ENOENT') throw error;
+    });
+  } catch (error) {
+    if (error.code === 'ENOENT') return;
+    throw error;
+  }
+}
+
 export function createTelemetryReceiver({ staleAfterMs = 3000, now = Date.now } = {}) {
   let latestFrame = null;
 
@@ -125,4 +182,28 @@ export function createTelemetryReceiver({ staleAfterMs = 3000, now = Date.now } 
       return normalizeFrame(latestFrame.frame, new Date(latestFrame.receivedAt).toISOString());
     },
   };
+}
+
+export async function listenTelemetryReceiver(receiver, socketPath = getTelemetrySocketPath()) {
+  await prepareTelemetrySocket(socketPath);
+  const server = receiver.listen(socketPath);
+  try {
+    await new Promise((resolve, reject) => {
+      const onError = (error) => {
+        server.off('listening', onListening);
+        reject(error);
+      };
+      const onListening = () => {
+        server.off('error', onError);
+        resolve();
+      };
+      server.once('error', onError);
+      server.once('listening', onListening);
+    });
+    await chmod(socketPath, 0o600);
+  } catch (error) {
+    await receiver.close();
+    throw error;
+  }
+  return socketPath;
 }

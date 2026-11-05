@@ -61,13 +61,21 @@ npm test
 On Linux, install Node.js 20 or newer and npm, then run the installer from a checkout:
 
 ```sh
-./linux-bridge/install.sh
+./linux-bridge/install.sh --game-dir "/path/to/American Truck Simulator"
 ```
 
-The installer checks common Steam library locations for ATS and accepts `--game-dir "/path/to/American Truck Simulator"` when detection is unavailable or you want to select a different installation. It installs the bridge under `${XDG_DATA_HOME:-$HOME/.local/share}/ats-companion/bridge` by default, without modifying ATS files. Start it with:
+The installer checks common Steam library locations for ATS. Use `--game-dir` when automatic detection is unavailable or you want to select a different installation. It installs the bridge under `${XDG_DATA_HOME:-$HOME/.local/share}/ats-companion/bridge` by default.
+
+For a native x86_64 Linux ATS installation, the installer also builds the SCS SDK plugin and installs `ATSCompanionTelemetry.so` under `bin/linux_x64/plugins`. The build needs `g++`, `curl`, `sha256sum`, and `unzip`; it downloads and verifies the official SCS Telemetry SDK 1.16. Restart ATS after installation so the game loads the plugin. The installer does not overwrite an existing plugin it does not own.
+
+For a Windows ATS installation launched through Proton, the Linux `.so` is not used. Install and run the Windows bridge and Windows telemetry plugin instead.
+
+Start the Linux bridge with:
 
 ```sh
 ${XDG_DATA_HOME:-$HOME/.local/share}/ats-companion/bridge/bin/ats-companion-bridge
 ```
 
-Linux pairing and the authenticated read-only API are available, but a real ATS/Linux telemetry path has not been verified. Linux snapshot requests therefore remain `503 telemetry_unavailable`; installing the bridge does not mean that live telemetry is supported. A controlled ATS session must deliver a real snapshot before that support claim changes.
+When `XDG_RUNTIME_DIR` is set, the native plugin and Linux bridge use `$XDG_RUNTIME_DIR/ats-companion/telemetry.sock`. Otherwise, they use `/tmp/ats-companion-<uid>/telemetry.sock`. Set `ATS_COMPANION_TELEMETRY_SOCKET` in both the game and bridge environments to use another socket path.
+
+The Linux bridge keeps pairing and the authenticated read-only snapshot API. Native live telemetry is experimental until a real game session is confirmed to load the plugin and deliver a fresh snapshot; otherwise snapshot requests return `503 telemetry_unavailable`.

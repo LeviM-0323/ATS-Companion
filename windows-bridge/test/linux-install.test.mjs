@@ -14,7 +14,7 @@ test('Linux installer help does not require an initialized home directory', { sk
     { encoding: 'utf8', env: { PATH: process.env.PATH ?? '/usr/bin:/bin' } },
   );
   assert.match(output, /Usage: install\.sh/);
-  assert.match(output, /Linux live telemetry has not been verified/);
+  assert.match(output, /Native Linux telemetry is installed only for an ATS bin\/linux_x64 game build/);
 });
 
 test('Linux installer prepares the bridge for an explicitly selected ATS installation', { skip: !isLinux }, async (t) => {
@@ -51,10 +51,44 @@ test('Linux installer prepares the bridge for an explicitly selected ATS install
     },
   );
 
-  assert.match(output, /ATS live telemetry is not verified on Linux/);
+  assert.match(output, /no native Linux ATS game binary was selected/);
   assert.match(await readFile(npmLog, 'utf8'), /ci --omit=dev/);
   assert.ok((await readFile(join(installPrefix, 'src', 'server.mjs'), 'utf8')).length > 0);
   assert.equal((await stat(join(installPrefix, 'bin', 'ats-companion-bridge'))).mode & 0o111, 0o111);
+});
+
+test('Linux installer refuses to replace an unmanaged native ATS telemetry plugin', { skip: !isLinux }, async (t) => {
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), 'ats-companion-plugin-safety-'));
+  t.after(() => rm(temporaryDirectory, { recursive: true, force: true }));
+
+  const gameDirectory = join(temporaryDirectory, 'American Truck Simulator');
+  const gameBinary = join(gameDirectory, 'bin', 'linux_x64', 'amtrucks');
+  const pluginPath = join(gameDirectory, 'bin', 'linux_x64', 'plugins', 'ATSCompanionTelemetry.so');
+  await mkdir(join(gameDirectory, 'bin', 'linux_x64', 'plugins'), { recursive: true });
+  await writeFile(gameBinary, 'ATS native executable');
+  await chmod(gameBinary, 0o755);
+  await writeFile(pluginPath, 'User plugin must stay in place.');
+
+  assert.throws(
+    () =>
+      execFileSync(
+        'bash',
+        [
+          new URL('../../linux-bridge/install.sh', import.meta.url).pathname,
+          '--game-dir',
+          gameDirectory,
+          '--prefix',
+          join(temporaryDirectory, 'installed'),
+        ],
+        { encoding: 'utf8', stdio: 'pipe' },
+      ),
+    (error) => {
+      assert.equal(error.status, 1);
+      assert.match(error.stderr.toString(), /An unmanaged ATS telemetry plugin already exists/);
+      return true;
+    },
+  );
+  assert.equal(await readFile(pluginPath, 'utf8'), 'User plugin must stay in place.');
 });
 
 test('Linux installer rejects an explicitly selected directory without ATS binaries', { skip: !isLinux }, async (t) => {

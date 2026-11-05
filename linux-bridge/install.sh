@@ -8,10 +8,10 @@ Usage: install.sh [--game-dir PATH] [--prefix PATH]
 Prepare the ATS Companion bridge on Linux. Node.js 20+ and npm are required.
 ATS is detected in common Steam library locations when possible. Use --game-dir
 to select an installation explicitly or when automatic detection is unavailable.
-The installer does not modify ATS files.
+For native Linux telemetry, g++, curl, sha256sum, and unzip are also required.
 
-Linux live telemetry has not been verified. This installs the pairing and
-authenticated API bridge, but game snapshots remain unavailable.
+Native Linux telemetry is installed only for an ATS bin/linux_x64 game build.
+Proton/Windows game installs keep using the Windows telemetry plugin.
 EOF
 }
 
@@ -22,6 +22,7 @@ fail() {
 
 game_directory=''
 install_prefix=''
+native_game_directory=''
 while (($#)); do
   case "$1" in
     --game-dir)
@@ -75,6 +76,11 @@ if [[ -n "$game_directory" ]]; then
   is_ats_directory "$game_directory" ||
     fail "ATS game binaries were not found under '$game_directory' (expected bin/linux_x64 or bin/win_x64)."
   printf 'ATS installation selected: %s\n' "$game_directory"
+  if [[ -x "$game_directory/bin/linux_x64/amtrucks" ]]; then
+    [[ "$(uname -m)" == x86_64 ]] ||
+      fail 'The native Linux ATS telemetry plugin currently supports x86_64 only.'
+    native_game_directory=$game_directory
+  fi
 else
   steam_roots=()
   if [[ -n "${HOME:-}" ]]; then
@@ -118,6 +124,34 @@ else
   fi
 fi
 
+if [[ -z "$native_game_directory" && -n "$game_directory" && -x "$game_directory/bin/linux_x64/amtrucks" ]]; then
+  [[ "$(uname -m)" == x86_64 ]] ||
+    fail 'The native Linux ATS telemetry plugin currently supports x86_64 only.'
+  native_game_directory=$game_directory
+fi
+
+if [[ -n "$native_game_directory" ]]; then
+  plugin_directory="$native_game_directory/bin/linux_x64/plugins"
+  plugin_path="$plugin_directory/ATSCompanionTelemetry.so"
+  plugin_marker="$plugin_directory/.ats-companion-telemetry"
+  if [[ -e "$plugin_directory" || -L "$plugin_directory" ]]; then
+    [[ -d "$plugin_directory" && ! -L "$plugin_directory" ]] ||
+      fail "The ATS plugin path must be a regular directory: $plugin_directory"
+  fi
+  if [[ -e "$plugin_path" || -L "$plugin_path" ]]; then
+    [[ -f "$plugin_path" && ! -L "$plugin_path" ]] ||
+      fail "The ATS telemetry plugin path is not a regular file: $plugin_path"
+    [[ -f "$plugin_marker" && ! -L "$plugin_marker" &&
+      "$(cat -- "$plugin_marker")" == 'ats-companion-linux-telemetry-v1' ]] ||
+      fail "An unmanaged ATS telemetry plugin already exists: $plugin_path. Remove it or back it up before installing."
+  fi
+  if [[ -e "$plugin_marker" || -L "$plugin_marker" ]]; then
+    [[ -f "$plugin_marker" && ! -L "$plugin_marker" &&
+      "$(cat -- "$plugin_marker")" == 'ats-companion-linux-telemetry-v1' ]] ||
+      fail "An unmanaged ATS telemetry marker already exists: $plugin_marker"
+  fi
+fi
+
 [[ "$install_prefix" != / ]] || fail '--prefix cannot be the filesystem root.'
 resolved_prefix=$(realpath -m -- "$install_prefix")
 resolved_source=$(realpath -- "$bridge_source")
@@ -151,8 +185,12 @@ mkdir -p -- "$install_parent" || fail "Could not create install directory: $inst
 staging_directory=$(mktemp -d "$install_parent/.ats-companion-bridge.XXXXXX") ||
   fail "Could not create a staging directory under: $install_parent"
 backup_directory=''
+plugin_temporary_file=''
+marker_temporary_file=''
 cleanup() {
   [[ -z "$staging_directory" || ! -d "$staging_directory" ]] || rm -rf -- "$staging_directory"
+  [[ -z "$plugin_temporary_file" || ! -e "$plugin_temporary_file" ]] || rm -f -- "$plugin_temporary_file"
+  [[ -z "$marker_temporary_file" || ! -e "$marker_temporary_file" ]] || rm -f -- "$marker_temporary_file"
 }
 trap cleanup EXIT
 
@@ -169,6 +207,10 @@ chmod 755 "$staging_directory/bin/ats-companion-bridge"
 
 npm ci --omit=dev --prefix "$staging_directory" ||
   fail 'Could not install bridge dependencies. Check npm access and retry.'
+if [[ -n "$native_game_directory" ]]; then
+  bash "$bridge_source/plugin/build-plugin-linux.sh" \
+    --output "$staging_directory/ATSCompanionTelemetry.so"
+fi
 
 if [[ -e "$install_prefix" ]]; then
   backup_directory=$(mktemp -d "$install_parent/.ats-companion-backup.XXXXXX") ||
@@ -196,4 +238,22 @@ fi
 
 printf 'ATS Companion bridge installed to: %s\n' "$install_prefix"
 printf 'Start it with: %s/bin/ats-companion-bridge\n' "$install_prefix"
-printf 'ATS live telemetry is not verified on Linux. Pairing and the authenticated API are available, but live snapshots remain unavailable.\n'
+if [[ -n "$native_game_directory" ]]; then
+  mkdir -p -- "$plugin_directory"
+  plugin_temporary_file="$plugin_directory/.ATSCompanionTelemetry.so.$$"
+  cp -- "$install_prefix/ATSCompanionTelemetry.so" "$plugin_temporary_file" ||
+    fail "Could not stage the ATS telemetry plugin in: $plugin_directory"
+  chmod 644 "$plugin_temporary_file"
+  marker_temporary_file="$plugin_directory/.ats-companion-telemetry.$$"
+  printf '%s\n' 'ats-companion-linux-telemetry-v1' >"$marker_temporary_file"
+  mv -f -- "$marker_temporary_file" "$plugin_marker"
+  marker_temporary_file=''
+  mv -f -- "$plugin_temporary_file" "$plugin_path"
+  plugin_temporary_file=''
+  rm -f -- "$install_prefix/ATSCompanionTelemetry.so"
+  printf 'Native ATS telemetry plugin installed to: %s\n' "$plugin_path"
+  printf 'Restart ATS to load the native telemetry plugin.\n'
+else
+  rm -f -- "$install_prefix/ATSCompanionTelemetry.so"
+  printf 'Live telemetry is unavailable for this install because no native Linux ATS game binary was selected.\n'
+fi

@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/server.mjs",
     "setup:plugin": "powershell -ExecutionPolicy Bypass -File plugin/setup-plugin.ps1",
+    "setup:plugin:linux": "bash plugin/build-plugin-linux.sh",
     "test": "node --test"
   },
   "engines": {

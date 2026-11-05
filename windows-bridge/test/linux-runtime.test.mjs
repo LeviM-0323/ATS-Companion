@@ -2,15 +2,16 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { test } from 'node:test';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { createServer } from 'node:net';
+import { mkdtemp, rm, stat } from 'node:fs/promises';
+import { createConnection, createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const isLinux = process.platform === 'linux';
 
-test('Linux bridge pairs devices and reports live telemetry unavailable', { skip: !isLinux }, async (t) => {
+test('Linux bridge returns a live snapshot after receiving a valid Unix socket frame', { skip: !isLinux }, async (t) => {
   const homeDirectory = await mkdtemp(join(tmpdir(), 'ats-companion-linux-'));
+  const telemetrySocket = join(homeDirectory, 'telemetry.sock');
   const portServer = createServer();
   await new Promise((resolve, reject) => {
     portServer.once('error', reject);
@@ -31,6 +32,7 @@ test('Linux bridge pairs devices and reports live telemetry unavailable', { skip
       HOST: '127.0.0.1',
       PORT: `${port}`,
       BRIDGE_URL: `http://127.0.0.1:${port}`,
+      ATS_COMPANION_TELEMETRY_SOCKET: telemetrySocket,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -48,7 +50,8 @@ test('Linux bridge pairs devices and reports live telemetry unavailable', { skip
     const handleOutput = (chunk) => {
       output += chunk;
       if (
-        output.includes('ATS live telemetry is not verified on Linux') &&
+        output.includes(`ATS telemetry receiver listening on ${telemetrySocket}`) &&
+        output.includes(`Waiting for the ATS plugin on ${telemetrySocket}`) &&
         output.includes(`ATS Companion bridge listening on 127.0.0.1:${port}`)
       ) {
         clearTimeout(timer);
@@ -67,6 +70,8 @@ test('Linux bridge pairs devices and reports live telemetry unavailable', { skip
     });
   });
   await startup;
+  assert.equal((await stat(homeDirectory)).mode & 0o777, 0o700);
+  assert.equal((await stat(telemetrySocket)).mode & 0o777, 0o600);
 
   const pairingResponse = await fetch(`http://127.0.0.1:${port}/api/v1/pairing/code`);
   assert.equal(pairingResponse.status, 200);
@@ -87,4 +92,52 @@ test('Linux bridge pairs devices and reports live telemetry unavailable', { skip
   });
   assert.equal(snapshotResponse.status, 503);
   assert.equal((await snapshotResponse.json()).error.code, 'telemetry_unavailable');
+
+  const telemetry = createConnection(telemetrySocket);
+  await once(telemetry, 'connect');
+  telemetry.write(
+    `${JSON.stringify({
+      schemaVersion: 1,
+      game: { connected: true, paused: false },
+      truck: {
+        make: 'Freightliner',
+        model: 'Cascadia',
+        speedMps: 27.7778,
+        gear: 12,
+        fuelLiters: 100,
+        fuelCapacityLiters: 500,
+        engineRpm: 1420,
+        odometerKm: 1000,
+      },
+      job: {
+        cargo: 'Produce',
+        origin: 'Bakersfield',
+        destination: 'Reno',
+        remainingMeters: 160934.4,
+        estimatedTimeSeconds: 3600,
+      },
+    })}\n`,
+  );
+  try {
+    let liveResponse;
+    const deadline = Date.now() + 1000;
+    do {
+      liveResponse = await fetch(`http://127.0.0.1:${port}/api/v1/snapshot`, {
+        headers: { Authorization: `Bearer ${device.token}` },
+      });
+      if (liveResponse.status !== 503) break;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    } while (Date.now() < deadline);
+
+    assert.equal(liveResponse.status, 200);
+    const snapshot = await liveResponse.json();
+    assert.equal(snapshot.mode, 'live');
+    assert.equal(snapshot.truck.make, 'Freightliner');
+    assert.equal(snapshot.truck.speedMph, 62.14);
+    assert.equal(snapshot.truck.fuelGallons, 26.42);
+    assert.equal(snapshot.job.remainingMiles, 100);
+    assert.equal(snapshot.job.estimatedTimeMinutes, 60);
+  } finally {
+    telemetry.destroy();
+  }
 });

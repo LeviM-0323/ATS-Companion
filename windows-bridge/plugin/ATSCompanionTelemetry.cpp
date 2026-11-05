@@ -1,7 +1,17 @@
+#if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#else
+#include <cerrno>
+#include <cstdlib>
+#include <cstring>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
+#endif
 
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <iomanip>
 #include <mutex>
@@ -15,7 +25,23 @@
 
 namespace {
 
+#if defined(_WIN32)
 constexpr wchar_t kPipeName[] = L"\\\\.\\pipe\\ats-companion-telemetry-v1";
+#else
+std::string telemetrySocketPath() {
+    const char* configuredPath = std::getenv("ATS_COMPANION_TELEMETRY_SOCKET");
+    if (configuredPath && configuredPath[0] != '\0') return configuredPath;
+
+    const char* runtimeDirectory = std::getenv("XDG_RUNTIME_DIR");
+    if (runtimeDirectory && runtimeDirectory[0] != '\0') {
+        return std::string(runtimeDirectory) + "/ats-companion/telemetry.sock";
+    }
+    const char* temporaryDirectory = std::getenv("TMPDIR");
+    const std::string temporaryRoot =
+        temporaryDirectory && temporaryDirectory[0] != '\0' ? temporaryDirectory : "/tmp";
+    return temporaryRoot + "/ats-companion-" + std::to_string(getuid()) + "/telemetry.sock";
+}
+#endif
 
 struct TelemetryState {
     bool connected = true;
@@ -40,7 +66,9 @@ std::mutex g_stateMutex;
 TelemetryState g_state;
 std::atomic<bool> g_stopping{ false };
 std::thread g_pipeThread;
+#if defined(_WIN32)
 HANDLE g_stopEvent = nullptr;
+#endif
 scs_log_t g_gameLog = nullptr;
 
 std::string jsonEscape(const std::string& value) {
@@ -95,6 +123,7 @@ std::string makeFrame(const TelemetryState& state) {
     return frame.str();
 }
 
+#if defined(_WIN32)
 void pipeWorker() {
     while (!g_stopping.load()) {
         if (!WaitNamedPipeW(kPipeName, 500)) {
@@ -143,6 +172,59 @@ void pipeWorker() {
         CloseHandle(pipe);
     }
 }
+#else
+int connectTelemetrySocket() {
+    const std::string path = telemetrySocketPath();
+    sockaddr_un address{};
+    if (path.size() >= sizeof(address.sun_path)) return -1;
+
+    const int socketHandle = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (socketHandle == -1) return -1;
+
+    address.sun_family = AF_UNIX;
+    std::memcpy(address.sun_path, path.c_str(), path.size() + 1);
+    if (connect(socketHandle, reinterpret_cast<const sockaddr*>(&address), sizeof(address)) == -1) {
+        close(socketHandle);
+        return -1;
+    }
+    return socketHandle;
+}
+
+void socketWorker() {
+    while (!g_stopping.load()) {
+        const int socketHandle = connectTelemetrySocket();
+        if (socketHandle == -1) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            continue;
+        }
+
+        while (!g_stopping.load()) {
+            TelemetryState state;
+            {
+                std::lock_guard<std::mutex> lock(g_stateMutex);
+                state = g_state;
+            }
+
+            const std::string frame = makeFrame(state);
+            size_t offset = 0;
+            while (offset < frame.size()) {
+                const ssize_t written = send(
+                    socketHandle,
+                    frame.data() + offset,
+                    frame.size() - offset,
+                    MSG_NOSIGNAL);
+                if (written == -1 && errno == EINTR) continue;
+                if (written <= 0) break;
+                offset += static_cast<size_t>(written);
+            }
+            if (offset != frame.size()) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+
+        close(socketHandle);
+    }
+}
+#endif
 
 SCSAPI_VOID storeFloat(
     const scs_string_t,
@@ -282,23 +364,32 @@ SCSAPI_RESULT scs_telemetry_init(
     registerFloatChannel(versionParams->register_for_channel, SCS_TELEMETRY_TRUCK_CHANNEL_navigation_time, &g_state.estimatedTimeSeconds);
 
     g_stopping.store(false);
+#if defined(_WIN32)
     g_stopEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
     if (!g_stopEvent) {
         if (g_gameLog) g_gameLog(SCS_LOG_TYPE_error, "ATS Companion could not start its telemetry worker.");
         return SCS_RESULT_generic_error;
     }
     g_pipeThread = std::thread(pipeWorker);
+#else
+    g_pipeThread = std::thread(socketWorker);
+#endif
+    if (g_gameLog) g_gameLog(SCS_LOG_TYPE_message, "ATS Companion telemetry initialized.");
     return SCS_RESULT_ok;
 }
 
 SCSAPI_VOID scs_telemetry_shutdown(void) {
     g_stopping.store(true);
+#if defined(_WIN32)
     if (g_stopEvent) SetEvent(g_stopEvent);
+#endif
     if (g_pipeThread.joinable()) g_pipeThread.join();
+#if defined(_WIN32)
     if (g_stopEvent) {
         CloseHandle(g_stopEvent);
         g_stopEvent = nullptr;
     }
+#endif
     std::lock_guard<std::mutex> lock(g_stateMutex);
     g_state.connected = false;
 }
