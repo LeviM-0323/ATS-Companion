@@ -102,6 +102,8 @@ export function CompanionApp({ tab }: { tab: Tab }) {
 
   const connectionLabel = stale
     ? 'STALE DATA'
+    : connection === 'waiting'
+      ? 'WAITING FOR TELEMETRY'
     : connection === 'connected'
       ? snapshot?.mode === 'demo'
         ? 'DEMO DATA'
@@ -162,7 +164,9 @@ export function CompanionApp({ tab }: { tab: Tab }) {
                 <Text style={styles.mutedText}>
                   {snapshot?.game.connected
                     ? `${snapshot.truck.make} ${snapshot.truck.model}`
-                    : 'Connect the Windows bridge to see your live truck and job.'}
+                    : connection === 'waiting'
+                      ? 'The bridge is connected, but ATS has not sent a fresh game snapshot yet.'
+                      : 'Connect the PC bridge to see your live truck and job.'}
                 </Text>
                 {!snapshot?.game.connected && (
                   <ActionButton label="SET UP BRIDGE" onPress={() => navigateTo('setup')} />
@@ -327,7 +331,7 @@ export function CompanionApp({ tab }: { tab: Tab }) {
 
         {tab === 'setup' && (
           <>
-            <SectionHeading eyebrow="LOCAL CONNECTION" title="Windows bridge" />
+            <SectionHeading eyebrow="LOCAL CONNECTION" title="PC bridge" />
             <Panel>
               {paired ? (
                 <>
@@ -342,7 +346,7 @@ export function CompanionApp({ tab }: { tab: Tab }) {
                 <>
                   <Text style={styles.cardTitle}>Connect to your PC</Text>
                   <Text style={[styles.mutedText, styles.setupCopy]}>
-                    Open the bridge setup page on your Windows PC. Scan its QR code or enter the
+                    Open the bridge setup page on your PC. Scan its QR code or enter the
                     short code below. Pairing is remembered securely on this device.
                   </Text>
                   <ActionButton
@@ -385,7 +389,10 @@ export function CompanionApp({ tab }: { tab: Tab }) {
                 </>
               )}
               {connectionMessage !== '' && (
-                <Text accessibilityRole="alert" style={styles.errorMessage}>
+                <Text
+                  accessibilityRole="alert"
+                  style={connection === 'waiting' ? styles.mutedText : styles.errorMessage}
+                >
                   {connectionMessage}
                 </Text>
               )}
@@ -393,12 +400,10 @@ export function CompanionApp({ tab }: { tab: Tab }) {
             <Panel style={styles.instructionsPanel}>
               <Text style={styles.cardEyebrow}>FIRST TIME?</Text>
               <Text style={styles.instructionText}>
-                Start the bridge on the Windows PC. Its local setup page opens automatically and
-                displays a one-time QR code. Install the SCS telemetry plugin to read live ATS data.
+                Start the ATS Companion bridge on your PC. Its local setup page displays a one-time
+                QR code. Install the SCS telemetry plugin and restart ATS to read live game data.
               </Text>
-              <Text style={styles.command}>
-                cd windows-bridge{'\n'}npm start{'\n'}npm run setup:plugin
-              </Text>
+              <Text style={styles.command}>See the README for platform-specific setup instructions.</Text>
             </Panel>
             <Text style={styles.networkNote}>
               Keep the bridge on a trusted private network. Do not expose its port to the internet.

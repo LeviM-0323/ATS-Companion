@@ -1,8 +1,9 @@
 import * as SecureStore from 'expo-secure-store';
 import { useEffect, useRef, useState } from 'react';
 import { isSnapshot, type Snapshot } from './contracts';
+import { classifySnapshotError } from './snapshot-status';
 
-type Connection = 'disconnected' | 'connecting' | 'connected' | 'error';
+type Connection = 'disconnected' | 'connecting' | 'connected' | 'waiting' | 'error';
 type DeviceCredential = { deviceId: string; token: string; bridgeUrl: string };
 
 const CREDENTIAL_KEY = 'ats-companion.device-credential';
@@ -83,7 +84,9 @@ export function useBridgeSession() {
         setConnection('error');
         setConnectionMessage('Enter the pairing token shown in the bridge window.');
       } else {
-        setConnection((current) => (current === 'connected' ? current : 'connecting'));
+        setConnection((current) =>
+          current === 'connected' || current === 'waiting' ? current : 'connecting',
+        );
         controller = new AbortController();
         const requestTimeout = setTimeout(() => controller?.abort(), 4000);
         try {
@@ -94,17 +97,25 @@ export function useBridgeSession() {
           const body: unknown = await response.json();
 
           if (!response.ok) {
-            const message =
-              body && typeof body === 'object' && 'error' in body
-                ? (body as { error?: { message?: string } }).error?.message
-                : undefined;
-            throw new Error(message || `Bridge returned HTTP ${response.status}.`);
-          }
-          if (!isSnapshot(body)) {
+            const failure = classifySnapshotError(response.status, body);
+            if (failure.connection === 'waiting') {
+              if (active) {
+                const lastSnapshot = snapshotRef.current;
+                setStale(lastSnapshot !== null);
+                if (lastSnapshot) {
+                  setStaleAgeSeconds(
+                    Math.max(0, Math.floor((Date.now() - Date.parse(lastSnapshot.capturedAt)) / 1000)),
+                  );
+                }
+                setConnection('waiting');
+                setConnectionMessage(failure.message);
+              }
+            } else {
+              throw new Error(failure.message);
+            }
+          } else if (!isSnapshot(body)) {
             throw new Error('The bridge returned telemetry in an unsupported format.');
-          }
-
-          if (active) {
+          } else if (active) {
             snapshotRef.current = body;
             setSnapshot(body);
             setStale(false);
