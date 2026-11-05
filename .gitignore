@@ -17,4 +17,4 @@ node_modules/
 *.pch
 *.tlog
 *.def
-!windows-bridge/plugin/ATSCompanionTelemetry.def
+!bridge/plugin/ATSCompanionTelemetry.def

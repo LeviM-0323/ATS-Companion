@@ -6,7 +6,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$pluginDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
+$bridgeDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
+$pluginDirectory = Join-Path $bridgeDirectory 'plugin'
 $outputDirectory = Join-Path $pluginDirectory 'build'
 $expectedSdkHash = '49821e25568f4d7e462135f577f8fef2ab197326404f2c1daef139b8f3dc5e69'
 if (-not $OutputPath) {

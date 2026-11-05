@@ -35,7 +35,10 @@ command -v curl >/dev/null 2>&1 || fail 'curl is required to download the SCS Te
 command -v sha256sum >/dev/null 2>&1 || fail 'sha256sum is required to verify the SCS Telemetry SDK.'
 command -v unzip >/dev/null 2>&1 || fail 'unzip is required to extract the SCS Telemetry SDK.'
 
-plugin_directory=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+bridge_directory=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+plugin_directory="$bridge_directory/plugin"
+[[ -f "$plugin_directory/ATSCompanionTelemetry.cpp" ]] ||
+  fail "The native telemetry plugin source file is missing: $plugin_directory/ATSCompanionTelemetry.cpp"
 if [[ -z "$output_path" ]]; then
   output_path="$plugin_directory/build/ATSCompanionTelemetry.so"
 fi

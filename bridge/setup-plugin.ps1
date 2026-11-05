@@ -6,7 +6,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$pluginDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
+$bridgeDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
+$pluginDirectory = Join-Path $bridgeDirectory 'plugin'
 $releaseAssetUri = 'https://github.com/LeviM-0323/ATS-Companion/releases/latest/download/ATSCompanionTelemetry.dll'
 $temporaryDll = $null
 
@@ -57,7 +58,7 @@ function Get-PluginDll {
       throw 'Choose either -PluginDll or -BuildFromSource, not both.'
     }
     $buildOutput = Join-Path ([System.IO.Path]::GetTempPath()) "ATSCompanionTelemetry-$([guid]::NewGuid().ToString('N')).dll"
-    & (Join-Path $pluginDirectory 'build-plugin.ps1') -OutputPath $buildOutput
+    & (Join-Path $bridgeDirectory 'build-plugin.ps1') -OutputPath $buildOutput
     if (-not (Test-Path -LiteralPath $buildOutput -PathType Leaf)) {
       throw 'The source build completed without producing the telemetry plugin DLL.'
     }

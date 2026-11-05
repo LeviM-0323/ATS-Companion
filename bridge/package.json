@@ -1,12 +1,12 @@
 {
-  "name": "ats-companion-windows-bridge",
+  "name": "ats-companion-bridge",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node src/server.mjs",
-    "setup:plugin": "powershell -ExecutionPolicy Bypass -File plugin/setup-plugin.ps1",
-    "setup:plugin:linux": "bash plugin/build-plugin-linux.sh",
+    "setup:plugin": "powershell -ExecutionPolicy Bypass -File setup-plugin.ps1",
+    "setup:plugin:linux": "bash build-plugin-linux.sh",
     "test": "node --test"
   },
   "engines": {

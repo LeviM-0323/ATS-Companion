@@ -5,14 +5,14 @@ on:
     paths:
       - '.github/workflows/windows-plugin.yml'
       - '.gitignore'
-      - 'windows-bridge/plugin/**'
+      - 'bridge/**'
   push:
     branches:
       - main
     paths:
       - '.github/workflows/windows-plugin.yml'
       - '.gitignore'
-      - 'windows-bridge/plugin/**'
+      - 'bridge/**'
   workflow_dispatch:
 
 permissions:
@@ -28,20 +28,20 @@ jobs:
       - name: Build x64 plugin
         shell: pwsh
         run: |
-          $outputPath = Join-Path $env:GITHUB_WORKSPACE 'windows-bridge/plugin/build/ATSCompanionTelemetry.dll'
-          ./windows-bridge/plugin/build-plugin.ps1 -CompilerToolset '14.44' -OutputPath $outputPath
+          $outputPath = Join-Path $env:GITHUB_WORKSPACE 'bridge/plugin/build/ATSCompanionTelemetry.dll'
+          ./bridge/build-plugin.ps1 -CompilerToolset '14.44' -OutputPath $outputPath
           if (-not (Test-Path -LiteralPath $outputPath -PathType Leaf) -or (Get-Item -LiteralPath $outputPath).Length -eq 0) {
             throw 'The Windows plugin build did not produce a non-empty DLL.'
           }
 
       - name: Test plugin installer behavior
         shell: pwsh
-        run: ./windows-bridge/plugin/test-install-plugin.ps1
+        run: ./bridge/test-install-plugin.ps1
 
       - name: Upload Windows plugin
         uses: actions/upload-artifact@v4
         with:
           name: ATSCompanionTelemetry-Windows
-          path: windows-bridge/plugin/build/ATSCompanionTelemetry.dll
+          path: bridge/plugin/build/ATSCompanionTelemetry.dll
           if-no-files-found: error
           retention-days: 30

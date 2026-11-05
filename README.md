@@ -1,6 +1,6 @@
 # ATS Companion
 
-A React Native companion for American Truck Simulator, with a mobile dashboard and a Windows bridge.
+A React Native companion for American Truck Simulator, with a mobile dashboard and Windows/Linux bridges.
 
 ## Current slice
 
@@ -24,7 +24,7 @@ npm start
 On the Windows PC, install dependencies and start the bridge:
 
 ```powershell
-cd windows-bridge
+cd bridge
 npm install
 npm start
 ```
@@ -52,7 +52,7 @@ The bridge defaults to port `3210`; set `PORT` to change it. Set `HOST` to `127.
 Run bridge tests with:
 
 ```powershell
-cd windows-bridge
+cd bridge
 npm test
 ```
 
@@ -61,7 +61,7 @@ npm test
 On Linux, install Node.js 20 or newer and npm, then run the installer from a checkout:
 
 ```sh
-./linux-bridge/install.sh --game-dir "/path/to/American Truck Simulator"
+./bridge/linux-install.sh --game-dir "/path/to/American Truck Simulator"
 ```
 
 The installer checks common Steam library locations for ATS. Use `--game-dir` when automatic detection is unavailable or you want to select a different installation. It installs the bridge under `${XDG_DATA_HOME:-$HOME/.local/share}/ats-companion/bridge` by default.

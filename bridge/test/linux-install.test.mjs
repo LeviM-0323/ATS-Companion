@@ -10,10 +10,10 @@ const isLinux = process.platform === 'linux';
 test('Linux installer help does not require an initialized home directory', { skip: !isLinux }, () => {
   const output = execFileSync(
     'bash',
-    [new URL('../../linux-bridge/install.sh', import.meta.url).pathname, '--help'],
+    [new URL('../linux-install.sh', import.meta.url).pathname, '--help'],
     { encoding: 'utf8', env: { PATH: process.env.PATH ?? '/usr/bin:/bin' } },
   );
-  assert.match(output, /Usage: install\.sh/);
+  assert.match(output, /Usage: linux-install\.sh/);
   assert.match(output, /Native Linux telemetry is installed only for an ATS bin\/linux_x64 game build/);
 });
 
@@ -35,7 +35,7 @@ test('Linux installer prepares the bridge for an explicitly selected ATS install
   const output = execFileSync(
     'bash',
     [
-      new URL('../../linux-bridge/install.sh', import.meta.url).pathname,
+      new URL('../linux-install.sh', import.meta.url).pathname,
       '--game-dir',
       gameDirectory,
       '--prefix',
@@ -74,7 +74,7 @@ test('Linux installer refuses to replace an unmanaged native ATS telemetry plugi
       execFileSync(
         'bash',
         [
-          new URL('../../linux-bridge/install.sh', import.meta.url).pathname,
+          new URL('../linux-install.sh', import.meta.url).pathname,
           '--game-dir',
           gameDirectory,
           '--prefix',
@@ -97,7 +97,7 @@ test('Linux installer rejects an explicitly selected directory without ATS binar
 
   const gameDirectory = join(temporaryDirectory, 'not ATS');
   await mkdir(gameDirectory);
-  const script = new URL('../../linux-bridge/install.sh', import.meta.url).pathname;
+  const script = new URL('../linux-install.sh', import.meta.url).pathname;
 
   assert.throws(
     () =>
@@ -133,7 +133,7 @@ test('Linux installer never replaces an ATS installation selected as its prefix'
       execFileSync(
         'bash',
         [
-          new URL('../../linux-bridge/install.sh', import.meta.url).pathname,
+          new URL('../linux-install.sh', import.meta.url).pathname,
           '--game-dir',
           gameDirectory,
           '--prefix',
@@ -170,7 +170,7 @@ test('Linux installer preserves an existing directory it does not own', { skip: 
       execFileSync(
         'bash',
         [
-          new URL('../../linux-bridge/install.sh', import.meta.url).pathname,
+          new URL('../linux-install.sh', import.meta.url).pathname,
           '--game-dir',
           gameDirectory,
           '--prefix',
@@ -212,7 +212,7 @@ test('Linux installer detects ATS in a common Steam library', { skip: !isLinux }
   const output = execFileSync(
     'bash',
     [
-      new URL('../../linux-bridge/install.sh', import.meta.url).pathname,
+      new URL('../linux-install.sh', import.meta.url).pathname,
       '--prefix',
       join(temporaryDirectory, 'installed'),
     ],

@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: install.sh [--game-dir PATH] [--prefix PATH]
+Usage: linux-install.sh [--game-dir PATH] [--prefix PATH]
 
 Prepare the ATS Companion bridge on Linux. Node.js 20+ and npm are required.
 ATS is detected in common Steam library locations when possible. Use --game-dir
@@ -40,7 +40,7 @@ while (($#)); do
       exit 0
       ;;
     *)
-      fail "Unknown option: $1. Run install.sh --help for usage."
+      fail "Unknown option: $1. Run linux-install.sh --help for usage."
       ;;
   esac
 done
@@ -63,7 +63,7 @@ node_major=$(node -p 'Number(process.versions.node.split(".")[0])')
   fail "Node.js 20 or newer is required; found $(node --version)."
 
 script_directory=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-bridge_source=$(cd -- "$script_directory/../windows-bridge" && pwd)
+bridge_source=$script_directory
 [[ -f "$bridge_source/package-lock.json" && -d "$bridge_source/src" ]] ||
   fail "Bridge source files were not found next to the installer: $bridge_source"
 
@@ -208,7 +208,7 @@ chmod 755 "$staging_directory/bin/ats-companion-bridge"
 npm ci --omit=dev --prefix "$staging_directory" ||
   fail 'Could not install bridge dependencies. Check npm access and retry.'
 if [[ -n "$native_game_directory" ]]; then
-  bash "$bridge_source/plugin/build-plugin-linux.sh" \
+  bash "$bridge_source/build-plugin-linux.sh" \
     --output "$staging_directory/ATSCompanionTelemetry.so"
 fi
 
